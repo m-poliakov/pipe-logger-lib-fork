@@ -156,7 +156,7 @@ pub enum Tee {
 /// To build a PipeLogger instance.
 pub struct PipeLoggerBuilder<P: AsRef<Path>> {
     rotate: Option<RotateMethod>,
-    rotate_hook: Option<Box<dyn Fn()>>,
+    rotate_hook: Option<Box<dyn Send + Fn()>>,
     count: Option<usize>,
     log_path: P,
     compress: bool,
@@ -180,7 +180,7 @@ impl<P: AsRef<Path>> PipeLoggerBuilder<P> {
         &self.rotate
     }
 
-    pub fn set_rotate_hook(&mut self, hook: Option<Box<dyn Fn()>>) -> &mut Self {
+    pub fn set_rotate_hook(&mut self, hook: Option<Box<dyn Send + Fn()>>) -> &mut Self {
         self.rotate_hook = hook;
         self
     }
@@ -418,7 +418,7 @@ impl<P: AsRef<Path>> PipeLoggerBuilder<P> {
 /// PipeLogger can help you stores, rotates and compresses logs.
 pub struct PipeLogger {
     rotate: Option<RotateMethod>,
-    rotate_hook: Option<Box<dyn Fn()>>,
+    rotate_hook: Option<Box<dyn Send + Fn()>>,
     count: Option<usize>,
     file: Option<File>,
     file_name: String,
