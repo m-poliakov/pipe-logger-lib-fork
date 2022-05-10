@@ -152,10 +152,11 @@ pub enum Tee {
     Stderr,
 }
 
-#[derive(Debug)]
+// #[derive(Debug)]
 /// To build a PipeLogger instance.
 pub struct PipeLoggerBuilder<P: AsRef<Path>> {
     rotate: Option<RotateMethod>,
+    rotate_hook: Option<Box<dyn Fn()>>,
     count: Option<usize>,
     log_path: P,
     compress: bool,
@@ -167,6 +168,7 @@ impl<P: AsRef<Path>> PipeLoggerBuilder<P> {
     pub fn new(log_path: P) -> PipeLoggerBuilder<P> {
         PipeLoggerBuilder {
             rotate: None,
+            rotate_hook: None,
             count: None,
             log_path,
             compress: false,
@@ -176,6 +178,11 @@ impl<P: AsRef<Path>> PipeLoggerBuilder<P> {
 
     pub fn rotate(&self) -> &Option<RotateMethod> {
         &self.rotate
+    }
+
+    pub fn set_rotate_hook(&mut self, hook: Option<Box<dyn Fn()>>) -> &mut Self {
+        self.rotate_hook = hook;
+        self
     }
 
     pub fn count(&self) -> &Option<usize> {
@@ -387,6 +394,7 @@ impl<P: AsRef<Path>> PipeLoggerBuilder<P> {
             OpenOptions::new().create(true).write(true).append(true).open(file_path.as_ref())?;
 
         Ok(PipeLogger {
+            rotate_hook: self.rotate_hook,
             rotate: self.rotate,
             count: self.count,
             file: Some(file),
@@ -410,6 +418,7 @@ impl<P: AsRef<Path>> PipeLoggerBuilder<P> {
 /// PipeLogger can help you stores, rotates and compresses logs.
 pub struct PipeLogger {
     rotate: Option<RotateMethod>,
+    rotate_hook: Option<Box<dyn Fn()>>,
     count: Option<usize>,
     file: Option<File>,
     file_name: String,
@@ -611,6 +620,9 @@ impl PipeLogger {
                             });
                         }
 
+                        if let Some(hook) = self.rotate_hook.as_ref() {
+                            hook();
+                        }
                         self.rotated_log_file_names.push(rotated_log_file_name);
 
                         if let Some(count) = self.count {
